@@ -1,0 +1,96 @@
+version: '3.8'
+
+services:
+  analysis-engine:
+    image: cpas-core:3.1
+    build:
+      context: .
+      dockerfile: Dockerfile.core
+    scale: 4
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 2
+              capabilities: [gpu]
+        limits:
+          memory: 16GB
+    environment:
+      - MODEL_PATH=/models/core
+      - BATCH_SIZE=32
+      - MAX_SEQUENCE_LENGTH=512
+    volumes:
+      - model_data:/models
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  ethics-monitor:
+    image: cpas-ethics:1.4
+    build:
+      context: .
+      dockerfile: Dockerfile.ethics
+    depends_on:
+      - analysis-engine
+    environment:
+      - ANALYSIS_ENGINE_URL=http://analysis-engine:8080
+      - ETHICS_THRESHOLD=0.8
+    volumes:
+      - ethics_logs:/logs/ethics
+
+  cultural-adapter:
+    image: cpas-culture:2.0
+    build:
+      context: .
+      dockerfile: Dockerfile.culture
+    configs:
+      - source: asian_context
+        target: /config/asian_context.yaml
+      - source: european_context
+        target: /config/european_context.yaml
+    environment:
+      - DEFAULT_CULTURE=western
+      - ADAPTATION_MODE=dynamic
+
+  api-gateway:
+    image: nginx:1.21
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - analysis-engine
+      - ethics-monitor
+      - cultural-adapter
+
+  monitoring:
+    image: prometheus:2.30
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+
+  logging:
+    image: elasticsearch:7.14
+    environment:
+      - discovery.type=single-node
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+
+configs:
+  asian_context:
+    file: ./config/asian_context.yaml
+  european_context:
+    file: ./config/european_context.yaml
+
+volumes:
+  model_data:
+  ethics_logs:
+  esdata:
+
+networks:
+  cpas-network:
+    driver: bridge 
