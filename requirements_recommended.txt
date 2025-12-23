@@ -5,13 +5,13 @@
 fastapi==0.95.2
 uvicorn==0.22.0
 pydantic==1.10.13
-python-multipart==0.0.6
+python-multipart==0.0.18
 
 # ML Libraries
-torch==2.2.0
-transformers==4.36.2
+torch==2.8.0
+transformers==4.53.0
 numpy==1.26.3
-scikit-learn==1.4.0
+scikit-learn==1.5.0
 
 # Audio Processing
 librosa==0.10.1
@@ -26,8 +26,8 @@ networkx==3.2.1
 plotly==5.18.0
 
 # Security
-cryptography==41.0.7
-python-jose==3.3.0
+cryptography==44.0.1
+python-jose==3.4.0
 passlib==1.7.4
 bcrypt==4.1.2
 
